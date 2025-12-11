@@ -65,7 +65,7 @@ ui <- fluidPage(
       h3("1. Choose predictors\nfor the model"),
       
       # Demography group ---------------------------------------
-      h4("Demography"),
+      h4("Demographic Info"),
       actionButton("demo_toggle", "Toggle all demography"),
       checkboxGroupInput(
         "pred_demo",
@@ -86,18 +86,9 @@ ui <- fluidPage(
       ),
       tags$hr(),
       
-      # Mental health group ------------------------------------
-      h4("Mental health"),
-      actionButton("mental_toggle", "Toggle all mental health"),
-      checkboxGroupInput(
-        "pred_mental",
-        NULL,
-        choices  = mental_choices,
-        selected = mental_choices
-      ),
       
       tags$hr(),
-      actionButton("update_model", "Update model"),
+      actionButton("update_model", "Update model", class = "btn-primary"),
       
       tags$hr(),
       h3("2. Predict age for\na specific person"),
@@ -144,18 +135,6 @@ ui <- fluidPage(
                   "Days physical health was bad (last 30 days):",
                   min = 0, max = 30, value = 2),
       
-      sliderInput("person_days_mentbad",
-                  "Days mental health was bad (last 30 days):",
-                  min = 0, max = 30, value = 2),
-      
-      sliderInput("person_littleinterest",
-                  "Little interest / pleasure score:",
-                  min = 0, max = 3, value = 1),
-      
-      sliderInput("person_depressed",
-                  "Depressed / hopeless score:",
-                  min = 0, max = 3, value = 1),
-      
       selectInput("person_physactive", "Physically active (yes / no):",
                   choices = levels(comp1$PhysActive))
     ),
@@ -188,7 +167,7 @@ ui <- fluidPage(
           h3("Compare with random NHANES participants"),
           numericInput("n_random", "How many random people to sample?",
                        value = 10, min = 1, max = 100),
-          actionButton("draw_random", "Draw random sample"),
+          actionButton("draw_random", "Draw random sample", class = "btn-primary"),
           tableOutput("random_table")
         )
       )
@@ -228,33 +207,19 @@ server <- function(input, output, session) {
                                selected = health_choices)
     }
   })
-  
-  observeEvent(input$mental_toggle, {
-    cur <- input$pred_mental
-    if (length(cur) == length(mental_choices)) {
-      updateCheckboxGroupInput(session, "pred_mental",
-                               selected = character(0))
-    } else {
-      updateCheckboxGroupInput(session, "pred_mental",
-                               selected = mental_choices)
-    }
-  })
+
   
   ## ---- refit model when Update is clicked -------------------
   
-  observeEvent(input$update_model, {
-    selected <- c(input$pred_demo, input$pred_health, input$pred_mental)
-    
-    if (length(selected) == 0) {
-      showNotification("Please select at least one predictor.",
-                       type = "error")
-      return()
-    }
-    
-    formula_str <- paste("Age ~", paste(selected, collapse = " + "))
-    new_model <- lm(as.formula(formula_str), data = comp1)
-    current_model(new_model)
-  })
+  model_fit <- eventReactive(input$update_model, {
+  selected <- c(input$pred_demo, input$pred_health, input$pred_mental)
+
+  validate(
+    need(length(selected) > 0, "Please select at least one predictor.")
+  )
+
+  lm(reformulate(selected, "Age"), data = comp1)
+})
   
   ## ---- Model fit statistics (R2 + RMSE only) ----------------
   
@@ -308,7 +273,7 @@ server <- function(input, output, session) {
       theme_minimal(base_size = 14)
   })
   
-  ## ---- Your age prediction tab ------------------------------
+  ## ---- Age prediction tab ------------------------------
   
   your_person <- reactive({
     data.frame(

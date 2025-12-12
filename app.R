@@ -137,7 +137,7 @@ ui <- fluidPage(
 
       mainPanel(
         h3("Predicted age based on your inputs"),
-        verbatimTextOutput("red_age"),
+        verbatimTextOutput("your_pred_age"),
         tags$br(),
         h4("Key drivers of prediction"),
         verbatimTextOutput("your_pred_drivers")
